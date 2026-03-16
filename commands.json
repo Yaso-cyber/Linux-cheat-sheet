@@ -1,0 +1,168 @@
+{
+  "categories": [
+    {
+      "name": "File System",
+      "commands": [
+        { "command": "ls", "syntax": "ls [options] [path]", "description": "List directory contents", "example": "ls -la /home" },
+        { "command": "cd", "syntax": "cd [directory]", "description": "Change the current working directory", "example": "cd /var/log" },
+        { "command": "pwd", "syntax": "pwd", "description": "Print the current working directory path", "example": "pwd" },
+        { "command": "mkdir", "syntax": "mkdir [options] directory", "description": "Create a new directory", "example": "mkdir -p /tmp/new/dir" },
+        { "command": "rmdir", "syntax": "rmdir [options] directory", "description": "Remove an empty directory", "example": "rmdir /tmp/emptydir" },
+        { "command": "rm", "syntax": "rm [options] file", "description": "Remove files or directories", "example": "rm -rf /tmp/oldfiles" },
+        { "command": "cp", "syntax": "cp [options] source dest", "description": "Copy files or directories", "example": "cp -r /src /dst" },
+        { "command": "mv", "syntax": "mv [options] source dest", "description": "Move or rename files and directories", "example": "mv file.txt newname.txt" },
+        { "command": "touch", "syntax": "touch [options] file", "description": "Create an empty file or update timestamps", "example": "touch newfile.txt" },
+        { "command": "ln", "syntax": "ln [options] target link", "description": "Create hard or symbolic links", "example": "ln -s /etc/nginx/nginx.conf nginx.conf" },
+        { "command": "find", "syntax": "find [path] [options]", "description": "Search for files in a directory hierarchy", "example": "find /home -name '*.log' -mtime +7" },
+        { "command": "locate", "syntax": "locate [options] pattern", "description": "Find files by name using a database", "example": "locate nginx.conf" },
+        { "command": "tree", "syntax": "tree [options] [directory]", "description": "Display directory structure as a tree", "example": "tree -L 2 /etc" }
+      ]
+    },
+    {
+      "name": "File Viewing & Editing",
+      "commands": [
+        { "command": "cat", "syntax": "cat [options] file", "description": "Concatenate and display file content", "example": "cat /etc/hosts" },
+        { "command": "less", "syntax": "less [options] file", "description": "View file content page by page", "example": "less /var/log/syslog" },
+        { "command": "more", "syntax": "more [options] file", "description": "View file content one screen at a time", "example": "more /etc/passwd" },
+        { "command": "head", "syntax": "head [options] file", "description": "Display the first lines of a file", "example": "head -n 20 /var/log/syslog" },
+        { "command": "tail", "syntax": "tail [options] file", "description": "Display the last lines of a file", "example": "tail -f /var/log/nginx/access.log" },
+        { "command": "nano", "syntax": "nano [options] file", "description": "Simple terminal text editor", "example": "nano /etc/hosts" },
+        { "command": "vim", "syntax": "vim [options] file", "description": "Powerful terminal text editor", "example": "vim /etc/nginx/nginx.conf" },
+        { "command": "diff", "syntax": "diff [options] file1 file2", "description": "Compare two files line by line", "example": "diff old.conf new.conf" },
+        { "command": "wc", "syntax": "wc [options] file", "description": "Count lines, words, and characters in a file", "example": "wc -l /etc/passwd" }
+      ]
+    },
+    {
+      "name": "Permissions & Ownership",
+      "commands": [
+        { "command": "chmod", "syntax": "chmod [options] mode file", "description": "Change file permissions", "example": "chmod 755 script.sh" },
+        { "command": "chown", "syntax": "chown [options] owner[:group] file", "description": "Change file owner and group", "example": "chown www-data:www-data /var/www" },
+        { "command": "chgrp", "syntax": "chgrp [options] group file", "description": "Change the group ownership of a file", "example": "chgrp developers project/" },
+        { "command": "umask", "syntax": "umask [mask]", "description": "Set default permission mask for new files", "example": "umask 022" },
+        { "command": "sudo", "syntax": "sudo [options] command", "description": "Execute a command as another user (default: root)", "example": "sudo apt update" },
+        { "command": "su", "syntax": "su [options] [user]", "description": "Switch to another user account", "example": "su - deploy" }
+      ]
+    },
+    {
+      "name": "Process Management",
+      "commands": [
+        { "command": "ps", "syntax": "ps [options]", "description": "Display running processes", "example": "ps aux | grep nginx" },
+        { "command": "top", "syntax": "top [options]", "description": "Display real-time system resource usage", "example": "top -u www-data" },
+        { "command": "htop", "syntax": "htop [options]", "description": "Interactive process viewer (enhanced top)", "example": "htop" },
+        { "command": "kill", "syntax": "kill [options] PID", "description": "Send a signal to a process", "example": "kill -9 1234" },
+        { "command": "killall", "syntax": "killall [options] name", "description": "Kill processes by name", "example": "killall nginx" },
+        { "command": "pkill", "syntax": "pkill [options] pattern", "description": "Send signal to processes matching a pattern", "example": "pkill -f worker.py" },
+        { "command": "bg", "syntax": "bg [job]", "description": "Resume a suspended job in the background", "example": "bg %1" },
+        { "command": "fg", "syntax": "fg [job]", "description": "Bring a background job to the foreground", "example": "fg %1" },
+        { "command": "jobs", "syntax": "jobs [options]", "description": "List active background jobs", "example": "jobs -l" },
+        { "command": "nohup", "syntax": "nohup command [args]", "description": "Run a command immune to hangups", "example": "nohup ./server.sh &" },
+        { "command": "nice", "syntax": "nice [option] command", "description": "Run a command with modified scheduling priority", "example": "nice -n 10 make" },
+        { "command": "renice", "syntax": "renice priority PID", "description": "Change the priority of a running process", "example": "renice -5 1234" }
+      ]
+    },
+    {
+      "name": "Networking",
+      "commands": [
+        { "command": "ping", "syntax": "ping [options] host", "description": "Send ICMP echo requests to a host", "example": "ping -c 4 google.com" },
+        { "command": "curl", "syntax": "curl [options] URL", "description": "Transfer data to or from a server", "example": "curl -o file.zip https://example.com/file.zip" },
+        { "command": "wget", "syntax": "wget [options] URL", "description": "Download files from the web", "example": "wget https://example.com/file.tar.gz" },
+        { "command": "ssh", "syntax": "ssh [options] user@host", "description": "Connect to a remote host via SSH", "example": "ssh -p 2222 admin@192.168.1.10" },
+        { "command": "scp", "syntax": "scp [options] source dest", "description": "Securely copy files between hosts", "example": "scp file.txt user@host:/tmp/" },
+        { "command": "rsync", "syntax": "rsync [options] source dest", "description": "Efficiently sync files/directories locally or remotely", "example": "rsync -avz /src/ user@host:/dst/" },
+        { "command": "netstat", "syntax": "netstat [options]", "description": "Show network connections and statistics", "example": "netstat -tulpn" },
+        { "command": "ss", "syntax": "ss [options]", "description": "Socket statistics (modern netstat replacement)", "example": "ss -tulpn" },
+        { "command": "ifconfig", "syntax": "ifconfig [interface] [options]", "description": "Configure network interfaces (legacy)", "example": "ifconfig eth0" },
+        { "command": "ip", "syntax": "ip [options] object command", "description": "Show and manage network interfaces and routes", "example": "ip addr show" },
+        { "command": "traceroute", "syntax": "traceroute [options] host", "description": "Trace the route packets take to a host", "example": "traceroute google.com" },
+        { "command": "nslookup", "syntax": "nslookup [options] host", "description": "Query DNS name servers", "example": "nslookup github.com" },
+        { "command": "dig", "syntax": "dig [options] host", "description": "DNS lookup utility (detailed)", "example": "dig +short MX gmail.com" },
+        { "command": "iptables", "syntax": "iptables [options]", "description": "Configure the Linux kernel firewall", "example": "iptables -L -v -n" }
+      ]
+    },
+    {
+      "name": "Disk & Storage",
+      "commands": [
+        { "command": "df", "syntax": "df [options] [file]", "description": "Report disk space usage of file systems", "example": "df -h" },
+        { "command": "du", "syntax": "du [options] [file]", "description": "Estimate disk usage of files and directories", "example": "du -sh /var/log/*" },
+        { "command": "mount", "syntax": "mount [options] device mountpoint", "description": "Mount a file system", "example": "mount /dev/sdb1 /mnt/usb" },
+        { "command": "umount", "syntax": "umount [options] mountpoint", "description": "Unmount a mounted file system", "example": "umount /mnt/usb" },
+        { "command": "fdisk", "syntax": "fdisk [options] device", "description": "Partition table manipulator", "example": "fdisk -l /dev/sda" },
+        { "command": "lsblk", "syntax": "lsblk [options]", "description": "List information about block devices", "example": "lsblk -o NAME,SIZE,TYPE,MOUNTPOINT" },
+        { "command": "blkid", "syntax": "blkid [options] [device]", "description": "Locate and print block device attributes", "example": "blkid /dev/sda1" }
+      ]
+    },
+    {
+      "name": "Text Processing",
+      "commands": [
+        { "command": "grep", "syntax": "grep [options] pattern [file]", "description": "Search for patterns in files", "example": "grep -rn 'error' /var/log/" },
+        { "command": "sed", "syntax": "sed [options] script [file]", "description": "Stream editor for filtering and transforming text", "example": "sed -i 's/foo/bar/g' file.txt" },
+        { "command": "awk", "syntax": "awk [options] 'program' [file]", "description": "Pattern scanning and processing language", "example": "awk '{print $1, $3}' access.log" },
+        { "command": "cut", "syntax": "cut [options] [file]", "description": "Remove sections from each line of a file", "example": "cut -d: -f1 /etc/passwd" },
+        { "command": "sort", "syntax": "sort [options] [file]", "description": "Sort lines of text files", "example": "sort -u -k2 data.txt" },
+        { "command": "uniq", "syntax": "uniq [options] [file]", "description": "Report or omit repeated lines", "example": "sort access.log | uniq -c | sort -rn" },
+        { "command": "tr", "syntax": "tr [options] set1 [set2]", "description": "Translate or delete characters", "example": "echo 'Hello' | tr 'a-z' 'A-Z'" },
+        { "command": "tee", "syntax": "tee [options] file", "description": "Read from stdin and write to stdout and files", "example": "ls | tee output.txt" },
+        { "command": "xargs", "syntax": "xargs [options] [command]", "description": "Build and execute commands from standard input", "example": "find . -name '*.tmp' | xargs rm" }
+      ]
+    },
+    {
+      "name": "System Information",
+      "commands": [
+        { "command": "uname", "syntax": "uname [options]", "description": "Print system information", "example": "uname -a" },
+        { "command": "hostname", "syntax": "hostname [options]", "description": "Show or set the system hostname", "example": "hostname -f" },
+        { "command": "uptime", "syntax": "uptime [options]", "description": "Show how long the system has been running", "example": "uptime -p" },
+        { "command": "whoami", "syntax": "whoami", "description": "Print the current user name", "example": "whoami" },
+        { "command": "id", "syntax": "id [options] [user]", "description": "Print user and group information", "example": "id deploy" },
+        { "command": "date", "syntax": "date [options] [format]", "description": "Display or set the system date and time", "example": "date '+%Y-%m-%d %H:%M:%S'" },
+        { "command": "cal", "syntax": "cal [options] [month] [year]", "description": "Display a calendar", "example": "cal -3" },
+        { "command": "free", "syntax": "free [options]", "description": "Display memory usage", "example": "free -h" },
+        { "command": "lscpu", "syntax": "lscpu [options]", "description": "Display CPU architecture information", "example": "lscpu" },
+        { "command": "lshw", "syntax": "lshw [options]", "description": "List detailed hardware configuration", "example": "lshw -short" },
+        { "command": "dmesg", "syntax": "dmesg [options]", "description": "Print kernel ring buffer messages", "example": "dmesg | tail -50" },
+        { "command": "env", "syntax": "env [options] [name=value] [command]", "description": "Print or set environment variables", "example": "env | grep PATH" },
+        { "command": "history", "syntax": "history [options]", "description": "Display command history", "example": "history | grep ssh" }
+      ]
+    },
+    {
+      "name": "Package Management",
+      "commands": [
+        { "command": "apt update", "syntax": "apt update", "description": "Update the package index (Debian/Ubuntu)", "example": "sudo apt update" },
+        { "command": "apt upgrade", "syntax": "apt upgrade [options]", "description": "Upgrade installed packages (Debian/Ubuntu)", "example": "sudo apt upgrade -y" },
+        { "command": "apt install", "syntax": "apt install package", "description": "Install a package (Debian/Ubuntu)", "example": "sudo apt install nginx" },
+        { "command": "apt remove", "syntax": "apt remove package", "description": "Remove a package (Debian/Ubuntu)", "example": "sudo apt remove nginx" },
+        { "command": "apt search", "syntax": "apt search keyword", "description": "Search for a package (Debian/Ubuntu)", "example": "apt search python3" },
+        { "command": "dnf install", "syntax": "dnf install package", "description": "Install a package (Fedora/RHEL)", "example": "sudo dnf install httpd" },
+        { "command": "yum install", "syntax": "yum install package", "description": "Install a package (CentOS/RHEL legacy)", "example": "sudo yum install httpd" },
+        { "command": "pacman -S", "syntax": "pacman -S package", "description": "Install a package (Arch Linux)", "example": "sudo pacman -S nginx" },
+        { "command": "snap install", "syntax": "snap install package", "description": "Install a snap package", "example": "sudo snap install code --classic" }
+      ]
+    },
+    {
+      "name": "Archiving & Compression",
+      "commands": [
+        { "command": "tar", "syntax": "tar [options] archive [files]", "description": "Create, extract, or list archive files", "example": "tar -czvf archive.tar.gz /data" },
+        { "command": "gzip", "syntax": "gzip [options] file", "description": "Compress files using gzip", "example": "gzip -9 largefile.log" },
+        { "command": "gunzip", "syntax": "gunzip [options] file.gz", "description": "Decompress gzip files", "example": "gunzip archive.tar.gz" },
+        { "command": "zip", "syntax": "zip [options] archive files", "description": "Create ZIP archive files", "example": "zip -r project.zip ./project" },
+        { "command": "unzip", "syntax": "unzip [options] archive", "description": "Extract ZIP archive files", "example": "unzip project.zip -d /tmp" },
+        { "command": "bzip2", "syntax": "bzip2 [options] file", "description": "Compress files using bzip2", "example": "bzip2 -k data.csv" },
+        { "command": "xz", "syntax": "xz [options] file", "description": "Compress files using xz/LZMA", "example": "xz -9 backup.tar" }
+      ]
+    },
+    {
+      "name": "Shell & Scripting",
+      "commands": [
+        { "command": "echo", "syntax": "echo [options] string", "description": "Display a line of text", "example": "echo -e 'Hello\\nWorld'" },
+        { "command": "printf", "syntax": "printf format [arguments]", "description": "Format and print data", "example": "printf 'Name: %s, Age: %d\\n' Alice 30" },
+        { "command": "read", "syntax": "read [options] variable", "description": "Read a line from standard input", "example": "read -p 'Enter name: ' name" },
+        { "command": "export", "syntax": "export [name[=value]]", "description": "Set environment variables for child processes", "example": "export PATH=\"$PATH:/opt/bin\"" },
+        { "command": "alias", "syntax": "alias [name[=value]]", "description": "Create a shortcut for a command", "example": "alias ll='ls -la'" },
+        { "command": "source", "syntax": "source file", "description": "Execute commands from a file in the current shell", "example": "source ~/.bashrc" },
+        { "command": "cron", "syntax": "crontab [options]", "description": "Schedule commands to run at specific times", "example": "crontab -e" },
+        { "command": "at", "syntax": "at [options] time", "description": "Schedule a command to run once at a specific time", "example": "echo 'backup.sh' | at 02:00" },
+        { "command": "test", "syntax": "test expression", "description": "Evaluate conditional expressions in scripts", "example": "test -f /etc/hosts && echo 'exists'" },
+        { "command": "set", "syntax": "set [options] [args]", "description": "Set or display shell options and positional parameters", "example": "set -euo pipefail" }
+      ]
+    }
+  ]
+}
