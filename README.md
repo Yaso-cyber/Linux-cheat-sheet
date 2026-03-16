@@ -2,6 +2,11 @@
 
 An interactive, categorized Linux command reference with an embedded mini terminal for safe practice.
 
+## Live Demo
+
+- GitHub Pages URL: https://yaso-cyber.github.io/Linux-cheat-sheet/
+- If you see 404, enable Pages deployment using the steps in the Deployment section below.
+
 ## Features
 
 - Organized command categories (file operations, system info, networking, permissions, and more)
@@ -45,3 +50,26 @@ Option 2 (recommended):
 - Test text tools: cat, head, tail, grep, wc, sort, uniq.
 - Test system/network samples: uname -a, whoami, ps, ping, curl.
 - Verify terminal controls: clear, collapse, expand, and header toggle button.
+
+## Deployment (GitHub Pages)
+
+This repository includes an Actions workflow at .github/workflows/deploy-pages.yml.
+
+To enable it:
+1. Open repository Settings on GitHub.
+2. Go to Pages.
+3. Set Source to GitHub Actions.
+4. Go to Actions tab and run or re-run the Deploy static site to GitHub Pages workflow.
+5. Wait for it to finish, then open the Live Demo URL above.
+
+## Branch Protection (Recommended)
+
+If GitHub warns your repository is not protected, configure protection for main:
+1. Settings -> Branches -> Add branch protection rule.
+2. Branch name pattern: main.
+3. Enable at least:
+	- Require a pull request before merging
+	- Require status checks to pass before merging
+	- Restrict who can push to matching branches (optional for solo projects)
+
+This removes the unprotected-branch warning and makes the repository safer for future changes.
