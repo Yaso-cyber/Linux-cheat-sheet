@@ -563,5 +563,418 @@
   <button id="back-to-top" aria-label="Back to top" title="Back to top">↑</button>
 
   <script src="src/app.js"></script>
+  <title>Linux Cheat Sheet — Interactive Terminal</title>
+  <meta name="description" content="An interactive, categorised Linux commands cheat sheet with an embedded mini terminal to practice commands." />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<header>
+  <div class="header-logo" aria-hidden="true">🐧</div>
+  <div class="header-title">
+    <h1>Linux Cheat Sheet</h1>
+    <p>Interactive reference with built-in terminal</p>
+  </div>
+  <div class="header-actions">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="6" cy="6" r="5"/><line x1="10.5" y1="10.5" x2="15" y2="15"/>
+      </svg>
+      <input id="search" type="search" placeholder="Search commands…" aria-label="Search commands" autocomplete="off" spellcheck="false" />
+    </div>
+    <button class="btn" id="toggle-terminal-btn" title="Toggle terminal panel">⌨ Terminal</button>
+  </div>
+</header>
+
+<!-- ══════════════ APP LAYOUT ══════════════ -->
+<div class="app-layout">
+  <main class="main-content" id="main-content">
+
+    <!-- Category filter pills -->
+    <div class="filter-bar" id="filter-bar" role="group" aria-label="Filter by category">
+      <button class="filter-pill active" data-cat="all">All</button>
+      <button class="filter-pill" data-cat="files">📁 Files &amp; Dirs</button>
+      <button class="filter-pill" data-cat="content">📄 File Content</button>
+      <button class="filter-pill" data-cat="permissions">🔒 Permissions</button>
+      <button class="filter-pill" data-cat="processes">⚙ Processes</button>
+      <button class="filter-pill" data-cat="system">🖥 System</button>
+      <button class="filter-pill" data-cat="networking">🌐 Networking</button>
+      <button class="filter-pill" data-cat="archiving">📦 Archiving</button>
+      <button class="filter-pill" data-cat="users">👤 Users</button>
+      <button class="filter-pill" data-cat="text">✏ Text Processing</button>
+    </div>
+
+    <!-- Command cards grid -->
+    <div class="commands-grid" id="commands-grid"></div>
+  </main>
+
+  <!-- ══════════════ TERMINAL PANEL ══════════════ -->
+  <section id="terminal-panel" role="region" aria-label="Interactive terminal">
+    <div class="term-topbar">
+      <div class="term-dots" aria-hidden="true">
+        <span class="term-dot red"></span>
+        <span class="term-dot yellow"></span>
+        <span class="term-dot green"></span>
+      </div>
+      <span class="term-title">bash — Linux Cheat Sheet Terminal</span>
+      <div class="term-controls">
+        <span class="term-hint">↑↓ history · Tab autocomplete · Ctrl+C cancel</span>
+        <button class="term-clear-btn" id="term-clear" title="Clear terminal output">Clear</button>
+        <button class="term-toggle-btn" id="term-expand" title="Expand terminal">⤢</button>
+        <button class="term-toggle-btn" id="term-toggle" title="Collapse terminal">−</button>
+      </div>
+    </div>
+    <div class="term-body" id="term-body" aria-live="polite" aria-label="Terminal output"></div>
+    <div class="term-input-row">
+      <span class="term-prompt-label" id="term-prompt-label" aria-hidden="true">user@linux-box:~$ </span>
+      <input
+        id="term-input"
+        type="text"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        aria-label="Terminal input"
+        placeholder="Type a command and press Enter…"
+      />
+    </div>
+  </section>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ══════════════ CHEAT SHEET DATA ══════════════ -->
+<script>
+const CHEAT_DATA = [
+  {
+    id: 'files',
+    icon: '📁',
+    title: 'Files & Directories',
+    commands: [
+      { name: 'ls',           args: '-la',          desc: 'List directory contents (long format, hidden files)' },
+      { name: 'ls',           args: '-lh',          desc: 'List with human-readable file sizes' },
+      { name: 'pwd',          args: '',             desc: 'Print current working directory' },
+      { name: 'cd',           args: '~/projects',   desc: 'Change directory (~ = home)' },
+      { name: 'cd',           args: '..',           desc: 'Move up one directory' },
+      { name: 'mkdir',        args: '-p dir/sub',   desc: 'Create directories (including parents)' },
+      { name: 'touch',        args: 'file.txt',     desc: 'Create empty file / update timestamp' },
+      { name: 'cp',           args: 'src.txt dst.txt', desc: 'Copy file to destination' },
+      { name: 'cp',           args: '-r src/ dst/', desc: 'Copy directory recursively' },
+      { name: 'mv',           args: 'old.txt new.txt', desc: 'Move / rename file' },
+      { name: 'rm',           args: 'file.txt',     desc: 'Remove file' },
+      { name: 'rm',           args: '-rf dir/',     desc: 'Remove directory recursively (use with care!)' },
+      { name: 'find',         args: '. -name "*.txt"', desc: 'Find files matching a pattern' },
+      { name: 'find',         args: '/etc -type f', desc: 'Find all regular files under /etc' },
+      { name: 'which',        args: 'python3',      desc: 'Locate a command in PATH' },
+    ]
+  },
+  {
+    id: 'content',
+    icon: '📄',
+    title: 'File Content',
+    commands: [
+      { name: 'cat',   args: 'readme.txt',        desc: 'Print file contents to stdout' },
+      { name: 'cat',   args: '-n readme.txt',     desc: 'Print with line numbers' },
+      { name: 'head',  args: '-n 20 readme.txt',  desc: 'Show first 20 lines' },
+      { name: 'tail',  args: '-n 20 readme.txt',  desc: 'Show last 20 lines' },
+      { name: 'tail',  args: '-f logfile',        desc: 'Follow file as it grows (logs)' },
+      { name: 'grep',  args: 'pattern file.txt',  desc: 'Search for a pattern in file' },
+      { name: 'grep',  args: '-i -n pattern file.txt', desc: 'Case-insensitive search with line numbers' },
+      { name: 'grep',  args: '-r pattern dir/',   desc: 'Recursive search in directory' },
+      { name: 'wc',    args: '-l file.txt',       desc: 'Count lines in file' },
+      { name: 'wc',    args: '-w file.txt',       desc: 'Count words in file' },
+      { name: 'sort',  args: 'file.txt',          desc: 'Sort lines in alphabetical order' },
+      { name: 'sort',  args: '-r file.txt',       desc: 'Sort lines in reverse order' },
+      { name: 'uniq',  args: 'file.txt',          desc: 'Remove duplicate adjacent lines' },
+      { name: 'echo',  args: '"Hello, Linux!"',   desc: 'Print text to stdout' },
+      { name: 'echo',  args: '"text" > file.txt', desc: 'Write text to file (overwrite)' },
+      { name: 'echo',  args: '"text" >> file.txt',desc: 'Append text to file' },
+    ]
+  },
+  {
+    id: 'permissions',
+    icon: '🔒',
+    title: 'Permissions',
+    commands: [
+      { name: 'chmod', args: '755 script.sh',   desc: 'Set permissions: owner rwx, group rx, others rx' },
+      { name: 'chmod', args: '644 file.txt',    desc: 'Set permissions: owner rw, group r, others r' },
+      { name: 'chmod', args: '+x script.sh',    desc: 'Add execute permission for all' },
+      { name: 'chmod', args: 'u+x,g-w file',   desc: 'Symbolic: add user execute, remove group write' },
+      { name: 'chown', args: 'user:group file', desc: 'Change file owner and group' },
+      { name: 'chown', args: '-R user dir/',    desc: 'Change owner recursively' },
+      { name: 'ls',    args: '-l',              desc: 'View permissions (rwx columns)' },
+      { name: 'id',    args: '',                desc: 'Show current user ID and groups' },
+      { name: 'whoami',args: '',                desc: 'Print effective username' },
+    ]
+  },
+  {
+    id: 'processes',
+    icon: '⚙',
+    title: 'Process Management',
+    commands: [
+      { name: 'ps',   args: 'aux',         desc: 'List all running processes' },
+      { name: 'ps',   args: '-ef',         desc: 'Full-format listing of all processes' },
+      { name: 'top',  args: '',            desc: 'Real-time process viewer (snapshot here)' },
+      { name: 'kill', args: '1234',        desc: 'Terminate process by PID (SIGTERM)' },
+      { name: 'kill', args: '-9 1234',     desc: 'Force kill process (SIGKILL)' },
+      { name: 'kill', args: '-l',          desc: 'List all signal names' },
+    ]
+  },
+  {
+    id: 'system',
+    icon: '🖥',
+    title: 'System Information',
+    commands: [
+      { name: 'uname',    args: '-a',     desc: 'Print all system information' },
+      { name: 'uname',    args: '-r',     desc: 'Print kernel version' },
+      { name: 'hostname', args: '',       desc: 'Display system hostname' },
+      { name: 'uptime',   args: '',       desc: 'How long system has been running' },
+      { name: 'date',     args: '',       desc: 'Print current date and time' },
+      { name: 'cal',      args: '',       desc: 'Display calendar for current month' },
+      { name: 'df',       args: '-h',     desc: 'Disk space usage (human-readable)' },
+      { name: 'du',       args: '-sh *',  desc: 'Size of each item in current dir' },
+      { name: 'free',     args: '-h',     desc: 'Memory usage (human-readable)' },
+      { name: 'env',      args: '',       desc: 'Print all environment variables' },
+      { name: 'export',   args: 'VAR=val',desc: 'Set an environment variable' },
+      { name: 'history',  args: '',       desc: 'Show command history' },
+    ]
+  },
+  {
+    id: 'networking',
+    icon: '🌐',
+    title: 'Networking',
+    commands: [
+      { name: 'ping',  args: '-c 4 google.com', desc: 'Send 4 ICMP echo requests' },
+      { name: 'curl',  args: 'https://example.com', desc: 'Fetch URL contents' },
+      { name: 'curl',  args: '-o file.html https://example.com', desc: 'Save URL to file' },
+      { name: 'ssh',   args: 'user@host',        desc: 'Connect to remote host via SSH' },
+      { name: 'ssh',   args: '-p 2222 user@host',desc: 'Connect on non-default SSH port' },
+    ]
+  },
+  {
+    id: 'archiving',
+    icon: '📦',
+    title: 'Archiving & Compression',
+    commands: [
+      { name: 'tar',   args: '-czf archive.tar.gz dir/', desc: 'Create compressed tar archive' },
+      { name: 'tar',   args: '-xzf archive.tar.gz',     desc: 'Extract a tar.gz archive' },
+      { name: 'tar',   args: '-tzf archive.tar.gz',     desc: 'List contents of tar.gz' },
+      { name: 'gzip',  args: 'file.txt',                desc: 'Compress file with gzip' },
+      { name: 'gzip',  args: '-d file.txt.gz',          desc: 'Decompress a .gz file' },
+      { name: 'zip',   args: 'archive.zip file1 file2', desc: 'Create a zip archive' },
+      { name: 'unzip', args: 'archive.zip',             desc: 'Extract a zip archive' },
+    ]
+  },
+  {
+    id: 'users',
+    icon: '👤',
+    title: 'Users & Groups',
+    commands: [
+      { name: 'whoami', args: '',                desc: 'Print current username' },
+      { name: 'id',     args: '',                desc: 'Show user ID, group ID, groups' },
+      { name: 'id',     args: 'username',        desc: 'Show IDs for a specific user' },
+      { name: 'env',    args: '',                desc: 'Show environment variables' },
+      { name: 'export', args: 'PATH=$PATH:/opt', desc: 'Extend PATH variable' },
+    ]
+  },
+  {
+    id: 'text',
+    icon: '✏',
+    title: 'Text Processing',
+    commands: [
+      { name: 'grep',  args: '"^root" /etc/passwd', desc: 'Lines starting with "root"' },
+      { name: 'grep',  args: '-v "^#" file',        desc: 'Filter out comment lines' },
+      { name: 'sort',  args: '-k2 -n file.txt',     desc: 'Sort by 2nd column numerically' },
+      { name: 'uniq',  args: '-c sorted.txt',       desc: 'Count duplicate lines' },
+      { name: 'wc',    args: '-l file.txt',         desc: 'Count lines' },
+      { name: 'head',  args: '-n 5 file.txt',       desc: 'First 5 lines' },
+      { name: 'tail',  args: '-n 5 file.txt',       desc: 'Last 5 lines' },
+      { name: 'cat',   args: 'a.txt b.txt > c.txt', desc: 'Concatenate files into one' },
+      { name: 'echo',  args: '$HOME',               desc: 'Print environment variable' },
+    ]
+  },
+];
+</script>
+
+<!-- ══════════════ CHEAT SHEET RENDERER ══════════════ -->
+<script type="module">
+import { insertCommand, runImmediate } from './js/terminal.js';
+
+const grid     = document.getElementById('commands-grid');
+const searchEl = document.getElementById('search');
+const filterBar= document.getElementById('filter-bar');
+const toast    = document.getElementById('toast');
+
+let activeCategory = 'all';
+let searchQuery    = '';
+let toastTimer     = null;
+
+/* ── Toast ─────────────────────────────────────────────── */
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+/* ── Copy to clipboard ─────────────────────────────────── */
+function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('Copied!'))
+      .catch(() => showToast('Copy failed'));
+    return;
+  }
+
+  const temp = document.createElement('textarea');
+  temp.value = text;
+  temp.setAttribute('readonly', '');
+  temp.style.position = 'absolute';
+  temp.style.left = '-9999px';
+  document.body.appendChild(temp);
+  temp.select();
+  document.execCommand('copy');
+  document.body.removeChild(temp);
+  showToast('Copied!');
+}
+
+/* ── Build the full command string ─────────────────────── */
+function fullCmd(name, args) {
+  return args ? `${name} ${args}` : name;
+}
+
+/* ── Render grid ────────────────────────────────────────── */
+function renderGrid() {
+  grid.innerHTML = '';
+
+  const q = searchQuery.toLowerCase();
+  let anyVisible = false;
+
+  for (const cat of CHEAT_DATA) {
+    if (activeCategory !== 'all' && cat.id !== activeCategory) continue;
+
+    const filteredCmds = cat.commands.filter(c => {
+      if (!q) return true;
+      return c.name.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q) || (c.args && c.args.toLowerCase().includes(q));
+    });
+
+    if (!filteredCmds.length) continue;
+    anyVisible = true;
+
+    const card = document.createElement('div');
+    card.className = 'cat-card';
+    card.dataset.cat = cat.id;
+
+    card.innerHTML = `
+      <div class="cat-header">
+        <span class="cat-icon" aria-hidden="true">${cat.icon}</span>
+        <span class="cat-title">${cat.title}</span>
+        <span class="cat-count">${filteredCmds.length}</span>
+      </div>
+      <div class="cmd-list"></div>
+    `;
+
+    const list = card.querySelector('.cmd-list');
+
+    for (const cmd of filteredCmds) {
+      const row = document.createElement('div');
+      row.className = 'cmd-row';
+      row.title = `Click to insert into terminal`;
+
+      const cmdStr = fullCmd(cmd.name, cmd.args);
+
+      row.innerHTML = `
+        <span class="cmd-name">${escHtml(cmd.name)}</span>
+        <span class="cmd-desc">${cmd.args ? `<code style="font-family:var(--font-mono);font-size:0.77rem;color:var(--text-muted)">${escHtml(cmd.args)}</code><br>` : ''}${escHtml(cmd.desc)}</span>
+        <span class="cmd-actions">
+          <button class="icon-btn run"   title="Run in terminal">▶ Run</button>
+          <button class="icon-btn copy"  title="Copy command">⎘ Copy</button>
+          <button class="icon-btn insert"title="Insert into terminal">↵ Use</button>
+        </span>
+      `;
+
+      // Clicking the row itself inserts the command
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('.icon-btn')) return;
+        insertCommand(cmdStr);
+        showToast(`Inserted: ${cmdStr}`);
+      });
+
+      row.querySelector('.run').addEventListener('click', (e) => {
+        e.stopPropagation();
+        runImmediate(cmdStr);
+        showToast(`Running: ${cmdStr}`);
+      });
+
+      row.querySelector('.copy').addEventListener('click', (e) => {
+        e.stopPropagation();
+        copyText(cmdStr);
+      });
+
+      row.querySelector('.insert').addEventListener('click', (e) => {
+        e.stopPropagation();
+        insertCommand(cmdStr);
+        showToast(`Inserted: ${cmdStr}`);
+      });
+
+      list.appendChild(row);
+    }
+
+    grid.appendChild(card);
+  }
+
+  if (!anyVisible) {
+    grid.innerHTML = `
+      <div class="no-results">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <p>No commands matched "<strong>${escHtml(q)}</strong>"</p>
+        <p style="margin-top:0.3rem;font-size:0.75rem">Try a different keyword or reset the filter.</p>
+      </div>
+    `;
+  }
+}
+
+/* ── HTML escape ────────────────────────────────────────── */
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ── Filter pills ───────────────────────────────────────── */
+filterBar.addEventListener('click', (e) => {
+  const pill = e.target.closest('.filter-pill');
+  if (!pill) return;
+  filterBar.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  pill.classList.add('active');
+  activeCategory = pill.dataset.cat;
+  renderGrid();
+});
+
+/* ── Search ─────────────────────────────────────────────── */
+let searchDebounce;
+searchEl.addEventListener('input', () => {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    searchQuery = searchEl.value.trim();
+    renderGrid();
+  }, 180);
+});
+
+/* ── Toggle terminal from header button ─────────────────── */
+document.getElementById('toggle-terminal-btn').addEventListener('click', () => {
+  document.getElementById('term-toggle').click();
+});
+
+/* ── Initial render ─────────────────────────────────────── */
+renderGrid();
+</script>
+
 </body>
 </html>
