@@ -181,7 +181,8 @@ document.getElementById('term-expand').addEventListener('click', () => {
     termPanel.classList.remove('collapsed');
     termPanel.classList.add('expanded');
   }
-  toggleBtn.textContent = expanded ? '−' : '−';
+  toggleBtn.textContent = '−';
+  toggleBtn.title = 'Collapse terminal';
 });
 
 /* ── Clear button ───────────────────────────────────────── */
