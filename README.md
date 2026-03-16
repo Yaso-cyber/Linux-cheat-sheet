@@ -31,6 +31,12 @@ Option 2 (recommended):
 1. Serve the folder with a local static server.
 2. Open the served URL (for example, http://localhost:5500 if using Live Server).
 
+## Test
+
+1. Install Node.js 24 or newer.
+2. Run npm test.
+3. The smoke test validates the terminal simulator against key documented commands.
+
 ## How To Use
 
 1. Browse categories and click a command row to insert it into the terminal.
@@ -54,6 +60,7 @@ Option 2 (recommended):
 ## Deployment (GitHub Pages)
 
 This repository includes an Actions workflow at .github/workflows/deploy-pages.yml.
+It also includes a CI workflow at .github/workflows/ci.yml for command smoke tests.
 
 To enable it:
 1. Open repository Settings on GitHub.

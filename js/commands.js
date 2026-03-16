@@ -16,8 +16,23 @@ function flag(args, name) {
   return args.includes(name) || args.includes('-' + name) || args.includes('--' + name);
 }
 
+function cloneNode(node) {
+  if (typeof node === 'string') return node;
+  return Object.fromEntries(Object.entries(node).map(([key, value]) => [key, cloneNode(value)]));
+}
+
+function basename(path) {
+  const parts = normalizePath(path).split('/').filter(Boolean);
+  return parts[parts.length - 1] || '';
+}
+
+function globToRegExp(pattern) {
+  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  return new RegExp(`^${escaped}$`);
+}
+
 /* ── Simulated filesystem state ──────────────────────────── */
-const FS = {
+const INITIAL_FS = {
   '/': {
     home: {
       user: {
@@ -45,8 +60,9 @@ const FS = {
   }
 };
 
-let cwd = '/home/user';      // current working directory
-const env = {
+let FS = cloneNode(INITIAL_FS);
+
+const INITIAL_ENV = {
   HOME: '/home/user',
   USER: 'user',
   HOSTNAME: 'linux-box',
@@ -56,6 +72,9 @@ const env = {
   EDITOR: 'nano',
   LANG: 'en_US.UTF-8',
 };
+
+let cwd = INITIAL_ENV.HOME;
+let env = { ...INITIAL_ENV };
 
 /* ── Path utilities ──────────────────────────────────────── */
 function normalizePath(p) {
@@ -96,6 +115,41 @@ function listDir(path) {
   return Object.keys(node);
 }
 
+function getParentNode(path) {
+  const parts = normalizePath(path).split('/').filter(Boolean);
+  if (!parts.length) return { parent: null, leaf: '' };
+  let parent = FS['/'];
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (!isDir(parent[parts[i]])) return { parent: null, leaf: parts[parts.length - 1] };
+    parent = parent[parts[i]];
+  }
+  return { parent, leaf: parts[parts.length - 1] };
+}
+
+function writeFile(path, content, append = false) {
+  const { parent, leaf } = getParentNode(path);
+  if (!parent) return false;
+  const previous = isFile(parent[leaf]) ? parent[leaf] : '';
+  parent[leaf] = append && previous ? `${previous}\n${content}` : content;
+  return true;
+}
+
+function walkTree(path, node, visit) {
+  if (!isDir(node)) return;
+  for (const [key, child] of Object.entries(node)) {
+    const fullPath = path === '/' ? '/' + key : path + '/' + key;
+    visit(fullPath, key, child);
+    if (isDir(child)) walkTree(fullPath, child, visit);
+  }
+}
+
+function resetTerminalState() {
+  FS = cloneNode(INITIAL_FS);
+  env = { ...INITIAL_ENV };
+  cwd = env.HOME;
+  _history = [];
+}
+
 function shortPath(p) { return p.startsWith(env.HOME) ? '~' + p.slice(env.HOME.length) : p; }
 
 /* ── pwd ─────────────────────────────────────────────────── */
@@ -127,7 +181,7 @@ COMMANDS.ls = (args) => {
   if (!longFmt) {
     const cols = entries.map(e => {
       const child = node[e];
-      return isDir(child) ? `\x1b[34m${e}/\x1b[0m` : e;
+      return isDir(child) ? `${e}/` : e;
     });
     return [ok(cols.join('  ') || '(empty)')];
   }
@@ -152,13 +206,14 @@ COMMANDS.echo = (args) => {
 /* ── cat ─────────────────────────────────────────────────── */
 COMMANDS.cat = (args) => {
   if (!args.length) return [info('cat: reading from stdin (try: cat filename)')];
+  const lineNumbers = args.includes('-n');
   const out = [];
-  for (const a of args) {
+  for (const a of args.filter(arg => !arg.startsWith('-'))) {
     const p    = resolvePath(a);
     const node = getNode(p);
     if (isDir(node))   { out.push(err(`cat: ${a}: Is a directory`)); continue; }
     if (!isFile(node)) { out.push(err(`cat: ${a}: No such file or directory`)); continue; }
-    node.split('\n').forEach(l => out.push(ok(l)));
+    node.split('\n').forEach((line, index) => out.push(ok(lineNumbers ? `${String(index + 1).padStart(6)}  ${line}` : line)));
   }
   return out;
 };
@@ -182,24 +237,34 @@ COMMANDS.tail = (args) => {
   if (!file) return [info('Usage: tail [-n N] <file>')];
   const node = getNode(resolvePath(file));
   if (!isFile(node)) return [err(`tail: ${file}: No such file or directory`)];
-  return node.split('\n').slice(-n).map(ok);
+  const lines = node.split('\n').slice(-n).map(ok);
+  if (args.includes('-f')) lines.push(info('(follow mode is simulated; showing current file contents only)'));
+  return lines;
 };
 
 /* ── mkdir ───────────────────────────────────────────────── */
 COMMANDS.mkdir = (args) => {
   if (!args.length) return [err('mkdir: missing operand')];
+  const parents = args.includes('-p');
   const out = [];
   for (const a of args.filter(a => !a.startsWith('-'))) {
     const p     = resolvePath(a);
     const parts = p.split('/').filter(Boolean);
     let node    = FS['/'];
     for (let i = 0; i < parts.length - 1; i++) {
-      if (!isDir(node[parts[i]])) { out.push(err(`mkdir: cannot create '${a}': No such file or directory`)); node = null; break; }
+      if (!isDir(node[parts[i]])) {
+        if (!parents) { out.push(err(`mkdir: cannot create '${a}': No such file or directory`)); node = null; break; }
+        node[parts[i]] = {};
+      }
       node = node[parts[i]];
     }
     if (!node) continue;
     const leaf = parts[parts.length - 1];
-    if (node[leaf] !== undefined) { out.push(err(`mkdir: cannot create '${a}': File exists`)); continue; }
+    if (node[leaf] !== undefined) {
+      if (parents && isDir(node[leaf])) continue;
+      out.push(err(`mkdir: cannot create '${a}': File exists`));
+      continue;
+    }
     node[leaf] = {};
     out.push(succ(`mkdir: created directory '${a}'`));
   }
@@ -252,19 +317,21 @@ COMMANDS.rm = (args) => {
 
 /* ── cp ──────────────────────────────────────────────────── */
 COMMANDS.cp = (args) => {
-  const src = args.find(a => !a.startsWith('-'));
-  const dst = args.filter(a => !a.startsWith('-'))[1];
+  const recursive = args.includes('-r') || args.includes('-R');
+  const plainArgs = args.filter(a => !a.startsWith('-'));
+  const [src, dst] = plainArgs;
   if (!src || !dst) return [err('Usage: cp <source> <destination>')];
   const srcNode = getNode(resolvePath(src));
-  if (!isFile(srcNode)) return [err(`cp: '${src}': No such file or directory`)];
-  const dstPath  = resolvePath(dst);
-  const dstParts = dstPath.split('/').filter(Boolean);
-  let parent = FS['/'];
-  for (let i = 0; i < dstParts.length - 1; i++) {
-    if (!isDir(parent[dstParts[i]])) return [err(`cp: cannot create '${dst}': No such directory`)];
-    parent = parent[dstParts[i]];
-  }
-  parent[dstParts[dstParts.length - 1]] = srcNode;
+  if (srcNode === undefined) return [err(`cp: '${src}': No such file or directory`)];
+  if (isDir(srcNode) && !recursive) return [err(`cp: -r not specified; omitting directory '${src}'`)];
+
+  let dstPath = resolvePath(dst);
+  const dstNode = getNode(dstPath);
+  if (isDir(dstNode)) dstPath = normalizePath(`${dstPath}/${basename(src)}`);
+
+  const { parent, leaf } = getParentNode(dstPath);
+  if (!parent) return [err(`cp: cannot create '${dst}': No such directory`)];
+  parent[leaf] = cloneNode(srcNode);
   return [succ(`'${src}' -> '${dst}'`)];
 };
 
@@ -301,14 +368,36 @@ COMMANDS.grep = (args) => {
   const caseI   = args.includes('-i');
   const lineNum = args.includes('-n');
   const invert  = args.includes('-v');
+  const recursive = args.includes('-r');
   const plain   = args.filter(a => !a.startsWith('-'));
   if (plain.length < 2) return [info('Usage: grep [options] <pattern> <file>')];
   const [pattern, ...files] = plain;
   const out = [];
+  let regex;
+  try {
+    regex = new RegExp(pattern, caseI ? 'i' : '');
+  } catch {
+    return [err(`grep: invalid regular expression: ${pattern}`)];
+  }
+
   for (const f of files) {
-    const node = getNode(resolvePath(f));
+    const targetPath = resolvePath(f);
+    const node = getNode(targetPath);
+    if (isDir(node)) {
+      if (!recursive) { out.push(err(`grep: ${f}: Is a directory`)); continue; }
+      walkTree(targetPath, node, (fullPath, _name, child) => {
+        if (!isFile(child)) return;
+        child.split('\n').forEach((line, i) => {
+          const match = regex.test(line);
+          if (match !== invert) {
+            const num = lineNum ? `${i + 1}:` : '';
+            out.push(ok(`${fullPath}:${num}${line}`));
+          }
+        });
+      });
+      continue;
+    }
     if (!isFile(node)) { out.push(err(`grep: ${f}: No such file or directory`)); continue; }
-    const regex = new RegExp(pattern, caseI ? 'i' : '');
     node.split('\n').forEach((line, i) => {
       const match = regex.test(line);
       if (match !== invert) {
@@ -325,6 +414,9 @@ COMMANDS.grep = (args) => {
 COMMANDS.wc = (args) => {
   const files = args.filter(a => !a.startsWith('-'));
   if (!files.length) return [info('Usage: wc [-l|-w|-c] <file>')];
+  const onlyLines = args.includes('-l');
+  const onlyWords = args.includes('-w');
+  const onlyBytes = args.includes('-c');
   const out = [];
   for (const f of files) {
     const node = getNode(resolvePath(f));
@@ -332,7 +424,10 @@ COMMANDS.wc = (args) => {
     const lines = node.split('\n').length;
     const words = node.split(/\s+/).filter(Boolean).length;
     const bytes = node.length;
-    out.push(ok(`  ${lines}  ${words}  ${bytes} ${f}`));
+    if (onlyLines) out.push(ok(`  ${lines} ${f}`));
+    else if (onlyWords) out.push(ok(`  ${words} ${f}`));
+    else if (onlyBytes) out.push(ok(`  ${bytes} ${f}`));
+    else out.push(ok(`  ${lines}  ${words}  ${bytes} ${f}`));
   }
   return out;
 };
@@ -340,25 +435,54 @@ COMMANDS.wc = (args) => {
 /* ── sort ────────────────────────────────────────────────── */
 COMMANDS.sort = (args) => {
   const reverse = args.includes('-r');
-  const file    = args.find(a => !a.startsWith('-'));
+  const numeric = args.includes('-n');
+  const keyIdx  = args.indexOf('-k');
+  const compactKey = args.find(arg => /^-k\d+$/.test(arg));
+  const keyValue = keyIdx >= 0
+    ? args[keyIdx + 1]
+    : compactKey
+      ? compactKey.slice(2)
+      : '1';
+  const key     = Math.max(parseInt(keyValue, 10) || 1, 1) - 1;
+  const file    = args.find((arg, index) => {
+    if (arg.startsWith('-')) return false;
+    if (keyIdx >= 0 && index === keyIdx + 1) return false;
+    return true;
+  });
   if (!file) return [info('Usage: sort [-r] <file>')];
   const node = getNode(resolvePath(file));
   if (!isFile(node)) return [err(`sort: ${file}: No such file or directory`)];
   const lines = node.split('\n');
-  lines.sort((a, b) => reverse ? b.localeCompare(a) : a.localeCompare(b));
+  lines.sort((a, b) => {
+    const aValue = (a.trim().split(/\s+/)[key] || '');
+    const bValue = (b.trim().split(/\s+/)[key] || '');
+    const result = numeric ? Number(aValue) - Number(bValue) : aValue.localeCompare(bValue);
+    return reverse ? -result : result;
+  });
   return lines.map(ok);
 };
 
 /* ── uniq ────────────────────────────────────────────────── */
 COMMANDS.uniq = (args) => {
+  const count = args.includes('-c');
   const file = args.find(a => !a.startsWith('-'));
   if (!file) return [info('Usage: uniq <file>')];
   const node = getNode(resolvePath(file));
   if (!isFile(node)) return [err(`uniq: ${file}: No such file or directory`)];
   const lines = node.split('\n');
-  const out   = [lines[0]];
-  for (let i = 1; i < lines.length; i++) if (lines[i] !== lines[i - 1]) out.push(lines[i]);
-  return out.map(ok);
+  const out   = [];
+  let current = lines[0];
+  let seen = 1;
+  for (let i = 1; i <= lines.length; i++) {
+    if (lines[i] === current) {
+      seen++;
+      continue;
+    }
+    out.push(count ? `${String(seen).padStart(4)} ${current}` : current);
+    current = lines[i];
+    seen = 1;
+  }
+  return out.filter(Boolean).map(ok);
 };
 
 /* ── chmod ───────────────────────────────────────────────── */
@@ -372,8 +496,9 @@ COMMANDS.chmod = (args) => {
 
 /* ── chown ───────────────────────────────────────────────── */
 COMMANDS.chown = (args) => {
-  if (args.length < 2) return [err('Usage: chown <owner>[:group] <file>')];
-  const [owner, file] = args;
+  const plainArgs = args.filter(a => !a.startsWith('-'));
+  if (plainArgs.length < 2) return [err('Usage: chown <owner>[:group] <file>')];
+  const [owner, file] = plainArgs;
   const node = getNode(resolvePath(file));
   if (node === undefined) return [err(`chown: ${file}: No such file or directory`)];
   return [succ(`ownership of '${file}' set to '${owner}'`)];
@@ -383,15 +508,19 @@ COMMANDS.chown = (args) => {
 COMMANDS.find = (args) => {
   const nameIdx  = args.indexOf('-name');
   const pattern  = nameIdx >= 0 ? args[nameIdx + 1] : null;
+  const typeIdx  = args.indexOf('-type');
+  const type     = typeIdx >= 0 ? args[typeIdx + 1] : null;
   const startRaw = args.find(a => !a.startsWith('-') && a !== (pattern || ''));
   const start    = resolvePath(startRaw || '.');
   const out      = [];
+  const nameRegex = pattern ? globToRegExp(pattern) : null;
 
   function walk(path, node) {
     if (!isDir(node)) return;
     for (const [key, child] of Object.entries(node)) {
       const fullPath = path === '/' ? '/' + key : path + '/' + key;
-      const matches  = !pattern || key === pattern || key.includes(pattern.replace(/\*/g, ''));
+      const typeMatches = !type || (type === 'f' && isFile(child)) || (type === 'd' && isDir(child));
+      const matches  = (!nameRegex || nameRegex.test(key)) && typeMatches;
       if (matches) out.push(ok(fullPath));
       if (isDir(child)) walk(fullPath, child);
     }
@@ -410,7 +539,7 @@ COMMANDS.which = (args) => {
                     'touch','chmod','chown','head','tail','sort','uniq','wc','df','du',
                     'ps','kill','top','uname','hostname','whoami','id','env','export',
                     'history','clear','date','cal','uptime','free','ping','curl','ssh',
-                    'tar','gzip','zip','unzip','nano','vim','man','help','which'];
+                    'tar','gzip','zip','unzip','nano','vim','man','help','which','python3','bash','git'];
   if (!args.length) return [err('which: missing argument')];
   return args.map(cmd => binaries.includes(cmd)
     ? ok(`/usr/bin/${cmd}`)
@@ -419,7 +548,11 @@ COMMANDS.which = (args) => {
 
 /* ── whoami / id ─────────────────────────────────────────── */
 COMMANDS.whoami = () => [ok(env.USER)];
-COMMANDS.id     = () => [ok(`uid=1000(user) gid=1000(user) groups=1000(user),4(adm),24(cdrom),27(sudo)`)];
+COMMANDS.id     = (args) => {
+  const user = args[0] || env.USER;
+  if (user !== env.USER) return [ok(`uid=1001(${user}) gid=1001(${user}) groups=1001(${user})`)];
+  return [ok(`uid=1000(user) gid=1000(user) groups=1000(user),4(adm),24(cdrom),27(sudo)`)];
+};
 
 /* ── hostname ────────────────────────────────────────────── */
 COMMANDS.hostname = () => [ok(env.HOSTNAME)];
@@ -478,6 +611,11 @@ COMMANDS.du = (args) => {
   const s    = args.includes('-s');
   const path = args.find(a => !a.startsWith('-')) || '.';
   const size = h ? '4.0K' : '4';
+  if (path === '*') {
+    const current = getNode(cwd);
+    if (!isDir(current)) return [err(`du: cannot access '${path}'`)];
+    return Object.keys(current).filter(name => !name.startsWith('.')).map(name => ok(`${size}\t${name}`));
+  }
   if (s) return [ok(`${size}\t${path}`)];
   return [ok(`${size}\t${path}`), ok(`${size}\t${path}`)];
 };
@@ -520,6 +658,7 @@ COMMANDS.ps = (args) => {
 /* ── kill ────────────────────────────────────────────────── */
 COMMANDS.kill = (args) => {
   if (!args.length) return [err('kill: usage: kill [-s sigspec | -n signum | -sigspec] pid | jobspec ... or kill -l [sigspec]')];
+  if (args.includes('-l')) return [ok('HUP INT QUIT KILL TERM STOP CONT')];
   const sig  = args.find(a => a.startsWith('-')) || '-15';
   const pids = args.filter(a => !a.startsWith('-'));
   return pids.map(p => !isNaN(+p)
@@ -571,13 +710,24 @@ COMMANDS.ping = (args) => {
 
 /* ── curl ────────────────────────────────────────────────── */
 COMMANDS.curl = (args) => {
-  const url = args.find(a => !a.startsWith('-'));
+  const saveIdx = args.indexOf('-o');
+  const url = args.find((arg, index) => {
+    if (arg.startsWith('-')) return false;
+    if (saveIdx >= 0 && index === saveIdx + 1) return false;
+    return true;
+  });
   if (!url) return [err('curl: no URL specified')];
+  const body = `<!DOCTYPE html><html><head><title>${url}</title></head><body>...</body></html>`;
+  if (saveIdx >= 0 && args[saveIdx + 1]) {
+    const target = resolvePath(args[saveIdx + 1]);
+    if (!writeFile(target, body)) return [err(`curl: ${args[saveIdx + 1]}: No such file or directory`)];
+    return [succ(`Saved response to ${args[saveIdx + 1]}`)];
+  }
   return [
     info(`  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current`),
     info(`                                 Dload  Upload   Total   Spent    Left  Speed`),
     ok(`100   648  100   648    0     0   1842      0 --:--:-- --:--:-- --:--:--  1843`),
-    ok(`<!DOCTYPE html><html><head><title>${url}</title></head><body>...</body></html>`),
+    ok(body),
   ];
 };
 
@@ -697,15 +847,7 @@ function handleRedirect(raw) {
     const [, left, file] = appendMatch;
     const result  = runSingle(left.trim());
     const content = result.map(r => r.text).join('\n');
-    const p = resolvePath(file);
-    const parts = p.split('/').filter(Boolean);
-    let node = FS['/'];
-    for (let i = 0; i < parts.length - 1; i++) {
-      if (!isDir(node[parts[i]])) return [err(`bash: ${file}: No such file or directory`)];
-      node = node[parts[i]];
-    }
-    const leaf = parts[parts.length - 1];
-    node[leaf] = (isFile(node[leaf]) ? node[leaf] + '\n' : '') + content;
+    if (!writeFile(resolvePath(file), content, true)) return [err(`bash: ${file}: No such file or directory`)];
     return [succ(`appended to '${file}'`)];
   }
 
@@ -713,14 +855,7 @@ function handleRedirect(raw) {
     const [, left, file] = writeMatch;
     const result  = runSingle(left.trim());
     const content = result.map(r => r.text).join('\n');
-    const p = resolvePath(file);
-    const parts = p.split('/').filter(Boolean);
-    let node = FS['/'];
-    for (let i = 0; i < parts.length - 1; i++) {
-      if (!isDir(node[parts[i]])) return [err(`bash: ${file}: No such file or directory`)];
-      node = node[parts[i]];
-    }
-    node[parts[parts.length - 1]] = content;
+    if (!writeFile(resolvePath(file), content)) return [err(`bash: ${file}: No such file or directory`)];
     return [succ(`written to '${file}'`)];
   }
 
@@ -786,3 +921,4 @@ function getCurrentPrompt() {
 }
 
 export { runCommand, getCurrentPrompt };
+export { resetTerminalState };

@@ -261,7 +261,23 @@ function showToast(msg) {
 
 /* ── Copy to clipboard ─────────────────────────────────── */
 function copyText(text) {
-  navigator.clipboard.writeText(text).then(() => showToast('Copied!'));
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('Copied!'))
+      .catch(() => showToast('Copy failed'));
+    return;
+  }
+
+  const temp = document.createElement('textarea');
+  temp.value = text;
+  temp.setAttribute('readonly', '');
+  temp.style.position = 'absolute';
+  temp.style.left = '-9999px';
+  document.body.appendChild(temp);
+  temp.select();
+  document.execCommand('copy');
+  document.body.removeChild(temp);
+  showToast('Copied!');
 }
 
 /* ── Build the full command string ─────────────────────── */
@@ -281,7 +297,7 @@ function renderGrid() {
 
     const filteredCmds = cat.commands.filter(c => {
       if (!q) return true;
-      return c.name.includes(q) || c.desc.toLowerCase().includes(q) || (c.args && c.args.toLowerCase().includes(q));
+      return c.name.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q) || (c.args && c.args.toLowerCase().includes(q));
     });
 
     if (!filteredCmds.length) continue;
